@@ -1,5 +1,8 @@
 import { SlackConversationsRepliesResponse } from "../types/slack";
-import { SaveThreadToNotionParams } from "../types/notion";
+import {
+  SaveThreadToNotionParams,
+  NotionPageCreateResponse,
+} from "../types/notion";
 
 export const isThreadStored = async (
   notionToken: string,
@@ -34,7 +37,7 @@ export const isThreadStored = async (
 
 export async function saveThreadToNotion(
   params: SaveThreadToNotionParams
-): Promise<boolean> {
+): Promise<string | null> {
   const {
     notionToken,
     notionDatabaseId,
@@ -51,6 +54,71 @@ export async function saveThreadToNotion(
     nextAction,
   } = params;
 
+  // childrenBlocks を一度に定義
+  const childrenBlocks = [
+    // 箇条書きポイントを `bulleted_list_item` ブロックとして追加
+    ...bulletPoints.map((point) => ({
+      object: "block",
+      type: "bulleted_list_item",
+      bulleted_list_item: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: point,
+            },
+          },
+        ],
+      },
+    })),
+    // 要約をパラグラフブロックとして追加
+    {
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: summary,
+            },
+          },
+        ],
+      },
+    },
+    // "Next Action" の見出しを追加
+    {
+      object: "block",
+      type: "heading_2",
+      heading_2: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: "Next Action",
+            },
+          },
+        ],
+      },
+    },
+    // NextActionをパラグラフブロックとして追加
+    {
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: nextAction,
+            },
+          },
+        ],
+      },
+    },
+  ];
+
+  // Notion APIにページを作成
   const notionResponse = await fetch("https://api.notion.com/v1/pages", {
     method: "POST",
     headers: {
@@ -80,7 +148,7 @@ export async function saveThreadToNotion(
           ],
         },
         Participants: {
-          multi_select: participantNames.map((name) => ({ name })),
+          multi_select: participantNames.map((name: string) => ({ name })),
         },
         "Reply Count": {
           number: replyCount,
@@ -112,79 +180,20 @@ export async function saveThreadToNotion(
           ],
         },
         Tags: {
-          multi_select: tags.map((tag) => ({ name: tag })),
+          multi_select: tags.map((tag: string) => ({ name: tag })),
         },
       },
-      children: [
-        {
-          object: "block",
-          type: "bulleted_list",
-          bulleted_list: bulletPoints.map((point) => ({
-            type: "bulleted_list_item",
-            bulleted_list_item: {
-              text: [
-                {
-                  type: "text",
-                  text: {
-                    content: point,
-                  },
-                },
-              ],
-            },
-          })),
-        },
-        {
-          object: "block",
-          type: "paragraph",
-          paragraph: {
-            text: [
-              {
-                type: "text",
-                text: {
-                  content: summary,
-                },
-              },
-            ],
-          },
-        },
-        {
-          object: "block",
-          type: "heading_2",
-          heading_2: {
-            text: [
-              {
-                type: "text",
-                text: {
-                  content: "Next Action",
-                },
-              },
-            ],
-          },
-        },
-        {
-          object: "block",
-          type: "paragraph",
-          paragraph: {
-            text: [
-              {
-                type: "text",
-                text: {
-                  content: nextAction,
-                },
-              },
-            ],
-          },
-        },
-      ],
+      children: childrenBlocks,
     }),
   });
 
-  const notionResult = await notionResponse.json();
+  const notionResult: NotionPageCreateResponse = await notionResponse.json();
 
   if (!notionResponse.ok) {
     console.error("Notion API error:", notionResult);
-    return false;
+    return null;
   }
 
-  return true;
+  const pageId = notionResult.id;
+  return pageId;
 }

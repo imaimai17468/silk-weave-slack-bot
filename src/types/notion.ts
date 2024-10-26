@@ -13,3 +13,24 @@ export type SaveThreadToNotionParams = {
   bulletPoints: string[];
   nextAction: string;
 };
+
+export type NotionPageCreateResponse = {
+  object: string;
+  id: string;
+  created_time: string;
+  last_edited_time: string;
+  created_by: {
+    object: string;
+    id: string;
+  };
+  last_edited_by: {
+    object: string;
+    id: string;
+  };
+  cover: null | any;
+  icon: null | any;
+  parent: any;
+  archived: boolean;
+  properties: any;
+  url: string;
+};
