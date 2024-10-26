@@ -13,7 +13,8 @@ export const generateSummaryAndTags = async (
   bulletPoints: string[];
   nextAction: string;
 }> => {
-  const prompt = `
+  try {
+    const prompt = `
 以下のSlackスレッドの内容を分析し、以下の情報を生成してください：
 
 1. スレッドの要約（日本語、100文字以内）
@@ -34,39 +35,49 @@ export const generateSummaryAndTags = async (
 ${content}
   `;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 500,
-      temperature: 0.7,
-    }),
-  });
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
 
-  const data = (await response.json()) as
-    | OpenAIChatCompletionResponse
-    | OpenAIErrorResponse;
+    const data = (await response.json()) as
+      | OpenAIChatCompletionResponse
+      | OpenAIErrorResponse;
 
-  if (!response.ok) {
-    const errorData = data as OpenAIErrorResponse;
-    throw new Error(`OpenAI API error: ${errorData.error.message}`);
+    if (!response.ok) {
+      const errorData = data as OpenAIErrorResponse;
+      throw new Error(`OpenAI API error: ${errorData.error.message}`);
+    }
+
+    const chatData = data as OpenAIChatCompletionResponse;
+    const assistantMessage = chatData.choices[0].message.content;
+
+    // レスポンスからJSONを抽出
+    let result;
+    try {
+      result = JSON.parse(assistantMessage);
+    } catch (parseError) {
+      console.error("Failed to parse assistant message:", assistantMessage);
+      throw new Error("Failed to parse assistant message");
+    }
+
+    return {
+      summary: result.summary,
+      tags: result.tags,
+      bulletPoints: result.bulletPoints,
+      nextAction: result.nextAction,
+    };
+  } catch (error) {
+    console.error("Error generating summary and tags:", error);
+    throw new Error("Error generating summary and tags");
   }
-
-  const chatData = data as OpenAIChatCompletionResponse;
-  const assistantMessage = chatData.choices[0].message.content;
-  
-  // レスポンスからJSONを抽出
-  const result = JSON.parse(assistantMessage);
-
-  return {
-    summary: result.summary,
-    tags: result.tags,
-    bulletPoints: result.bulletPoints,
-    nextAction: result.nextAction,
-  };
 };
