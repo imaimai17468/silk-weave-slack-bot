@@ -46,6 +46,21 @@ ${content}
         messages: [{ role: "user", content: prompt }],
         max_tokens: 500,
         temperature: 0.7,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "SummaryAndTags",
+            schema: {
+              type: "object",
+              properties: {
+                summary: { type: "string" },
+                tags: { type: "array", items: { type: "string" } },
+                bulletPoints: { type: "array", items: { type: "string" } },
+                nextAction: { type: "string" },
+              },
+            },
+          },
+        },
       }),
     });
 
