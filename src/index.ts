@@ -5,6 +5,7 @@ import {
   sendErrorMessageToSlack,
   postMessageToSlack,
   getUserNames,
+  getChannelName,
 } from "./utils/slack";
 import { generateSummaryAndTags } from "./utils/openai";
 
@@ -139,6 +140,9 @@ app.post("/thread-to-notion", async (c) => {
         const replyCount = messages.length - 1; // 最初のメッセージを除く
         const threadTimestamp = messages[0].ts;
 
+        // チャンネル名の取得
+        const channelName = await getChannelName(slackToken, channel_id);
+
         // ユーザー名の取得
         const userNames = await getUserNames(slackToken, participantIds);
 
@@ -179,6 +183,7 @@ app.post("/thread-to-notion", async (c) => {
           tags,
           bulletPoints,
           nextAction,
+          channelName,
         });
 
         if (!notionPageId) {

@@ -77,3 +77,35 @@ export const getUserNames = async (
 
   return await Promise.all(userNamePromises);
 };
+
+export const getChannelName = async (
+  slackToken: string,
+  channelId: string
+): Promise<string> => {
+  const response = await fetch(
+    `https://slack.com/api/conversations.info?channel=${channelId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${slackToken}`,
+      },
+    }
+  );
+
+  const data = (await response.json()) as {
+    ok: boolean;
+    channel?: {
+      id: string;
+      name: string;
+      [key: string]: any;
+    };
+    error?: string;
+  };
+
+  if (data.ok && data.channel) {
+    return data.channel.name;
+  } else {
+    console.error("Failed to get channel info:", data.error);
+    return "Unknown Channel";
+  }
+}

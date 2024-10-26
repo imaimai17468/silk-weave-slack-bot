@@ -52,6 +52,7 @@ export async function saveThreadToNotion(
     tags,
     bulletPoints,
     nextAction,
+    channelName,
   } = params;
 
   // childrenBlocks を一度に定義
@@ -181,6 +182,15 @@ export async function saveThreadToNotion(
         },
         Tags: {
           multi_select: tags.map((tag: string) => ({ name: tag })),
+        },
+        "Channel Name": {
+          rich_text: [
+            {
+              text: {
+                content: channelName,
+              },
+            },
+          ],
         },
       },
       children: childrenBlocks,
