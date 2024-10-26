@@ -48,7 +48,7 @@ app.post("/thread-to-notion", async (c) => {
           slackToken,
           channel_id,
           thread_ts,
-          "Notionにスレッドデータを送信します。"
+          "スレッドの情報を処理しています..."
         );
 
         if (!startMessageResult.ok) {
@@ -165,7 +165,7 @@ app.post("/thread-to-notion", async (c) => {
           await generateSummaryAndTags(openaiApiKey, threadContent);
 
         // Notionにスレッド情報を保存
-        const notionResult = await saveThreadToNotion({
+        const notionPageId = await saveThreadToNotion({
           notionToken,
           notionDatabaseId,
           title: messages[0].text || "No Title",
@@ -181,7 +181,7 @@ app.post("/thread-to-notion", async (c) => {
           nextAction,
         });
 
-        if (!notionResult) {
+        if (!notionPageId) {
           await sendErrorMessageToSlack(
             slackToken,
             channel_id,
@@ -194,12 +194,21 @@ app.post("/thread-to-notion", async (c) => {
           });
         }
 
+        // NotionページのURLを構築
+        const notionPageUrl = `https://www.notion.so/${notionPageId.replace(
+          /-/g,
+          ""
+        )}`;
+
+        // 処理完了のメッセージを投稿
+        const completionMessage = `スレッドの情報をNotionに保存しました。\n${notionPageUrl}`;
+
         // 処理完了のメッセージを投稿
         const postMessageResult = await postMessageToSlack(
           slackToken,
           channel_id,
           thread_ts,
-          "スレッドの情報をNotionに保存しました。"
+          completionMessage
         );
 
         if (!postMessageResult.ok) {
