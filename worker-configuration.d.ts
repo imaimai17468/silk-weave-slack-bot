@@ -4,4 +4,6 @@ interface CloudflareBindings {
   SLACK_BOT_TOKEN: string;
   NOTION_API_TOKEN: string;
   NOTION_DATABASE_ID: string;
+  OPENAI_API_KEY: string;
+  SLACK_WORKSPACE_URL: string;
 }

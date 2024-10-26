@@ -1,23 +1,36 @@
 import { Hono } from "hono";
-import type {
-  SlackConversationsRepliesResponse,
-  SlackChatPostMessageResponse,
-} from "./types/slack";
-import { isMessageStored } from "./utils/notion";
-import { sendErrorMessageToSlack } from "./utils/slack";
+import type { SlackConversationsRepliesResponse } from "./types/slack";
+import { isThreadStored, saveThreadToNotion } from "./utils/notion";
+import {
+  sendErrorMessageToSlack,
+  postMessageToSlack,
+  getUserNames,
+} from "./utils/slack";
+import { generateSummaryAndTags } from "./utils/openai";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 app.post("/thread-to-notion", async (c) => {
-  const slackToken = c.env.SLACK_BOT_TOKEN;
-  const notionToken = c.env.NOTION_API_TOKEN;
-  const notionDatabaseId = c.env.NOTION_DATABASE_ID;
+  const {
+    SLACK_BOT_TOKEN: slackToken,
+    NOTION_API_TOKEN: notionToken,
+    NOTION_DATABASE_ID: notionDatabaseId,
+    OPENAI_API_KEY: openaiApiKey,
+    SLACK_WORKSPACE_URL: slackWorkspaceUrl,
+  } = c.env;
 
   const body = await c.req.json();
 
   // Slackのイベントサブスクリプションの検証
   if (body.type === "url_verification") {
     return c.text(body.challenge);
+  }
+
+  // リトライイベントの処理をスキップ
+  const retryNumHeader = c.req.header("X-Slack-Retry-Num");
+  const retryNum = retryNumHeader ? parseInt(retryNumHeader, 10) : 0;
+  if (retryNum > 0) {
+    return c.json({ status: "ok" });
   }
 
   // イベントデータの処理
@@ -31,28 +44,15 @@ app.post("/thread-to-notion", async (c) => {
 
       try {
         // 処理開始のメッセージを投稿
-        const startMessageResponse = await fetch(
-          "https://slack.com/api/chat.postMessage",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${slackToken}`,
-            },
-            body: JSON.stringify({
-              channel: channel_id,
-              thread_ts: thread_ts,
-              text: "Notionにスレッドデータを送信します。",
-            }),
-          }
+        const startMessageResult = await postMessageToSlack(
+          slackToken,
+          channel_id,
+          thread_ts,
+          "Notionにスレッドデータを送信します。"
         );
-
-        const startMessageResult =
-          (await startMessageResponse.json()) as SlackChatPostMessageResponse;
 
         if (!startMessageResult.ok) {
           console.error("Slack API error:", startMessageResult.error);
-          // エラーをユーザーに通知
           await sendErrorMessageToSlack(
             slackToken,
             channel_id,
@@ -97,7 +97,7 @@ app.post("/thread-to-notion", async (c) => {
 
         const messages = result.messages;
 
-        if (!messages) {
+        if (!messages || messages.length === 0) {
           await sendErrorMessageToSlack(
             slackToken,
             channel_id,
@@ -110,102 +110,97 @@ app.post("/thread-to-notion", async (c) => {
           });
         }
 
-        // Notionにメッセージを保存
-        for (const message of messages) {
-          if (!message.text) {
-            continue;
-          }
-
-          const isStored = await isMessageStored(
-            notionToken,
-            notionDatabaseId,
-            message.client_msg_id
-          );
-
-          if (isStored) {
-            continue;
-          }
-
-          const notionResponse = await fetch(
-            "https://api.notion.com/v1/pages",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${notionToken}`,
-                "Content-Type": "application/json",
-                "Notion-Version": "2022-06-28", // 最新のNotion APIバージョンを指定
-              },
-              body: JSON.stringify({
-                parent: { database_id: notionDatabaseId },
-                properties: {
-                  Name: {
-                    title: [
-                      {
-                        text: {
-                          content: message.text,
-                        },
-                      },
-                    ],
-                  },
-                  Author: {
-                    rich_text: [
-                      {
-                        text: {
-                          content: message.user || "unknown",
-                        },
-                      },
-                    ],
-                  },
-                  "Message ID": {
-                    rich_text: [
-                      {
-                        text: {
-                          content: message.client_msg_id || message.ts,
-                        },
-                      },
-                    ],
-                  },
-                },
-              }),
-            }
-          );
-
-          const notionResult = await notionResponse.json();
-
-          if (!notionResponse.ok) {
-            console.error("Notion API error:", notionResult);
-            await sendErrorMessageToSlack(
-              slackToken,
-              channel_id,
-              thread_ts,
-              "Notion APIエラーが発生しました。"
-            );
-            return c.json({
-              status: "error",
-              message: "Notion APIエラーが発生しました。",
-            });
-          }
-        }
-
-        // ユーザーに返信
-        const postMessageResponse = await fetch(
-          "https://slack.com/api/chat.postMessage",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${slackToken}`,
-            },
-            body: JSON.stringify({
-              channel: channel_id,
-              thread_ts: thread_ts,
-              text: "スレッドの内容をNotionに保存しました。",
-            }),
-          }
+        // スレッドが既に保存されているか確認
+        const threadId = thread_ts;
+        const isStored = await isThreadStored(
+          notionToken,
+          notionDatabaseId,
+          threadId
         );
 
-        const postMessageResult: SlackChatPostMessageResponse =
-          await postMessageResponse.json();
+        if (isStored) {
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "このスレッドは既に保存されています。"
+          );
+          return c.json({
+            status: "error",
+            message: "スレッドは既に保存されています。",
+          });
+        }
+
+        // スレッド情報の抽出
+        const threadCreatorId = messages[0].user;
+        const participantIds = Array.from(
+          new Set(messages.map((msg) => msg.user))
+        );
+        const replyCount = messages.length - 1; // 最初のメッセージを除く
+        const threadTimestamp = messages[0].ts;
+
+        // ユーザー名の取得
+        const userNames = await getUserNames(slackToken, participantIds);
+
+        // スレッド作成者の名前を取得
+        const threadCreator = userNames.find(
+          (user) => user.userId === threadCreatorId
+        )?.userName;
+
+        // 参加者の名前のリストを作成
+        const participantNames = userNames.map((user) => user.userName);
+
+        // タイムスタンプを日時に変換
+        const threadDate = new Date(parseFloat(threadTimestamp) * 1000);
+
+        // スレッドのURLを生成
+        const formattedTimestamp = thread_ts.replace(".", "");
+        const threadUrl = `${slackWorkspaceUrl}/archives/${channel_id}/p${formattedTimestamp}`;
+
+        // スレッドのメッセージを結合
+        const threadContent = messages.map((msg) => msg.text).join("\n");
+
+        // 要約とタグの生成
+        const { summary, tags, bulletPoints, nextAction } =
+          await generateSummaryAndTags(openaiApiKey, threadContent);
+
+        // Notionにスレッド情報を保存
+        const notionResult = await saveThreadToNotion({
+          notionToken,
+          notionDatabaseId,
+          title: messages[0].text || "No Title",
+          threadCreator: threadCreator || "Unknown",
+          participantNames,
+          replyCount,
+          threadDate,
+          threadId,
+          threadUrl,
+          summary,
+          tags,
+          bulletPoints,
+          nextAction,
+        });
+
+        if (!notionResult) {
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "Notion APIエラーが発生しました。"
+          );
+          return c.json({
+            status: "error",
+            message: "Notion APIエラーが発生しました。",
+          });
+        }
+
+        // 処理完了のメッセージを投稿
+        const postMessageResult = await postMessageToSlack(
+          slackToken,
+          channel_id,
+          thread_ts,
+          "スレッドの情報をNotionに保存しました。"
+        );
 
         if (!postMessageResult.ok) {
           console.error("Slack API error:", postMessageResult.error);
