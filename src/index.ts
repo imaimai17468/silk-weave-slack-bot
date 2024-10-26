@@ -4,6 +4,7 @@ import type {
   SlackChatPostMessageResponse,
 } from "./types/slack";
 import { isMessageStored } from "./utils/notion";
+import { sendErrorMessageToSlack } from "./utils/slack";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -29,6 +30,41 @@ app.post("/thread-to-notion", async (c) => {
       const thread_ts = event.thread_ts || event.ts;
 
       try {
+        // 処理開始のメッセージを投稿
+        const startMessageResponse = await fetch(
+          "https://slack.com/api/chat.postMessage",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${slackToken}`,
+            },
+            body: JSON.stringify({
+              channel: channel_id,
+              thread_ts: thread_ts,
+              text: "Notionにスレッドデータを送信します。",
+            }),
+          }
+        );
+
+        const startMessageResult =
+          (await startMessageResponse.json()) as SlackChatPostMessageResponse;
+
+        if (!startMessageResult.ok) {
+          console.error("Slack API error:", startMessageResult.error);
+          // エラーをユーザーに通知
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "Slackへのメッセージ送信中にエラーが発生しました。"
+          );
+          return c.json({
+            status: "error",
+            message: "Slack APIエラーが発生しました。",
+          });
+        }
+
         // スレッドのメッセージを取得
         const slackResponse = await fetch(
           `https://slack.com/api/conversations.replies?channel=${encodeURIComponent(
@@ -47,6 +83,12 @@ app.post("/thread-to-notion", async (c) => {
 
         if (!result.ok) {
           console.error("Slack API error:", result.error);
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "Slack APIエラーが発生しました。"
+          );
           return c.json({
             status: "error",
             message: "Slack APIエラーが発生しました。",
@@ -56,6 +98,12 @@ app.post("/thread-to-notion", async (c) => {
         const messages = result.messages;
 
         if (!messages) {
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "スレッドが見つかりません。"
+          );
           return c.json({
             status: "error",
             message: "スレッドが見つかりません。",
@@ -108,6 +156,15 @@ app.post("/thread-to-notion", async (c) => {
                       },
                     ],
                   },
+                  "Message ID": {
+                    rich_text: [
+                      {
+                        text: {
+                          content: message.client_msg_id || message.ts,
+                        },
+                      },
+                    ],
+                  },
                 },
               }),
             }
@@ -117,6 +174,12 @@ app.post("/thread-to-notion", async (c) => {
 
           if (!notionResponse.ok) {
             console.error("Notion API error:", notionResult);
+            await sendErrorMessageToSlack(
+              slackToken,
+              channel_id,
+              thread_ts,
+              "Notion APIエラーが発生しました。"
+            );
             return c.json({
               status: "error",
               message: "Notion APIエラーが発生しました。",
@@ -146,6 +209,12 @@ app.post("/thread-to-notion", async (c) => {
 
         if (!postMessageResult.ok) {
           console.error("Slack API error:", postMessageResult.error);
+          await sendErrorMessageToSlack(
+            slackToken,
+            channel_id,
+            thread_ts,
+            "Slackへのメッセージ送信中にエラーが発生しました。"
+          );
           return c.json({
             status: "error",
             message: "Slack APIエラーが発生しました。",
@@ -155,6 +224,12 @@ app.post("/thread-to-notion", async (c) => {
         return c.json({ status: "ok" });
       } catch (error) {
         console.error("Error occurred:", error);
+        await sendErrorMessageToSlack(
+          slackToken,
+          channel_id,
+          thread_ts,
+          "エラーが発生しました。"
+        );
         return c.json({ status: "error", message: "エラーが発生しました。" });
       }
     }
