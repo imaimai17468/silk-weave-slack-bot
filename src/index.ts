@@ -141,7 +141,9 @@ app.post("/thread-to-notion", async (c) => {
         const threadTimestamp = messages[0].ts;
 
         // チャンネル名の取得
-        const channelName = await getChannelName(slackToken, channel_id);
+        const channelName = await getChannelName(slackToken, channel_id).then(
+          (name) => `#${name}`
+        );
 
         // ユーザー名の取得
         const userNames = await getUserNames(slackToken, participantIds);

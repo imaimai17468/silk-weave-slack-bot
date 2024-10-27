@@ -171,13 +171,7 @@ export async function saveThreadToNotion(
           ],
         },
         "Thread Creator": {
-          rich_text: [
-            {
-              text: {
-                content: threadCreator,
-              },
-            },
-          ],
+          select: { name: threadCreator },
         },
         Participants: {
           multi_select: participantNames.map((name: string) => ({ name })),
@@ -215,13 +209,7 @@ export async function saveThreadToNotion(
           multi_select: tags.map((tag: string) => ({ name: tag })),
         },
         "Channel Name": {
-          rich_text: [
-            {
-              text: {
-                content: channelName,
-              },
-            },
-          ],
+          select: { name: channelName },
         },
       },
       children: childrenBlocks,
