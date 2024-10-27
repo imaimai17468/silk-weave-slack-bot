@@ -165,7 +165,7 @@ app.post("/thread-to-notion", async (c) => {
         const threadContent = messages.map((msg) => msg.text).join("\n");
 
         // 要約とタグの生成
-        const { summary, tags, bulletPoints, nextAction } =
+        const { shortSummary, longSummary, tags, bulletPoints, nextAction } =
           await generateSummaryAndTags(openaiApiKey, threadContent);
 
         // Notionにスレッド情報を保存
@@ -179,7 +179,8 @@ app.post("/thread-to-notion", async (c) => {
           threadDate,
           threadId,
           threadUrl,
-          summary,
+          shortSummary,
+          longSummary,
           tags,
           bulletPoints,
           nextAction,

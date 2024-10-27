@@ -48,7 +48,8 @@ export async function saveThreadToNotion(
     threadDate,
     threadId,
     threadUrl,
-    summary,
+    shortSummary,
+    longSummary,
     tags,
     bulletPoints,
     nextAction,
@@ -72,7 +73,7 @@ export async function saveThreadToNotion(
         ],
       },
     },
-    // 要約をパラグラフブロックとして追加
+    // 長い要約をパラグラフブロックとして追加
     {
       object: "block",
       type: "paragraph",
@@ -81,7 +82,7 @@ export async function saveThreadToNotion(
           {
             type: "text",
             text: {
-              content: summary,
+              content: longSummary,
             },
           },
         ],
@@ -205,7 +206,7 @@ export async function saveThreadToNotion(
           rich_text: [
             {
               text: {
-                content: summary,
+                content: shortSummary,
               },
             },
           ],

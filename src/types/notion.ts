@@ -8,7 +8,8 @@ export type SaveThreadToNotionParams = {
   threadDate: Date;
   threadId: string;
   threadUrl: string;
-  summary: string;
+  shortSummary: string;
+  longSummary: string;
   tags: string[];
   bulletPoints: string[];
   nextAction: string;
