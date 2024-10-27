@@ -57,21 +57,21 @@ export async function saveThreadToNotion(
 
   // childrenBlocks を一度に定義
   const childrenBlocks = [
-    // 箇条書きポイントを `bulleted_list_item` ブロックとして追加
-    ...bulletPoints.map((point) => ({
+    // "概要" の見出しを追加
+    {
       object: "block",
-      type: "bulleted_list_item",
-      bulleted_list_item: {
+      type: "heading_2",
+      heading_2: {
         rich_text: [
           {
             type: "text",
             text: {
-              content: point,
+              content: "概要",
             },
           },
         ],
       },
-    })),
+    },
     // 要約をパラグラフブロックとして追加
     {
       object: "block",
@@ -87,6 +87,36 @@ export async function saveThreadToNotion(
         ],
       },
     },
+    // "ポイント" の見出しを追加
+    {
+      object: "block",
+      type: "heading_2",
+      heading_2: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: "ポイント",
+            },
+          },
+        ],
+      },
+    },
+    // 箇条書きポイントを `bulleted_list_item` ブロックとして追加
+    ...bulletPoints.map((point) => ({
+      object: "block",
+      type: "bulleted_list_item",
+      bulleted_list_item: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: point,
+            },
+          },
+        ],
+      },
+    })),
     // "Next Action" の見出しを追加
     {
       object: "block",
