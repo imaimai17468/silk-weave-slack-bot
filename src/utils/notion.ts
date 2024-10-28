@@ -44,7 +44,6 @@ export async function saveThreadToNotion(
     title,
     threadCreator,
     participantNames,
-    replyCount,
     threadDate,
     threadId,
     threadUrl,
@@ -235,9 +234,6 @@ export async function saveThreadToNotion(
         },
         Participants: {
           multi_select: participantNames.map((name: string) => ({ name })),
-        },
-        "Reply Count": {
-          number: replyCount,
         },
         "Thread Date": {
           date: {

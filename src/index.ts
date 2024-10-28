@@ -137,7 +137,6 @@ app.post("/thread-to-notion", async (c) => {
         const participantIds = Array.from(
           new Set(messages.map((msg) => msg.user))
         );
-        const replyCount = messages.length - 1; // 最初のメッセージを除く
         const threadTimestamp = messages[0].ts;
 
         // チャンネル名の取得
@@ -183,7 +182,6 @@ app.post("/thread-to-notion", async (c) => {
           title: messages[0].text || "No Title",
           threadCreator: threadCreator || "Unknown",
           participantNames,
-          replyCount,
           threadDate,
           threadId,
           threadUrl,

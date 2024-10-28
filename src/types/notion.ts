@@ -4,7 +4,6 @@ export type SaveThreadToNotionParams = {
   title: string;
   threadCreator: string;
   participantNames: string[];
-  replyCount: number;
   threadDate: Date;
   threadId: string;
   threadUrl: string;
