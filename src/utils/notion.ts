@@ -268,7 +268,9 @@ export async function saveThreadToNotion(
           select: { name: channelName },
         },
         CreatedAt: {
-          created_time: new Date().toISOString(),
+          date: {
+            start: new Date().toISOString(),
+          },
         },
       },
       children: childrenBlocks,
