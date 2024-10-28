@@ -241,7 +241,9 @@ export async function saveThreadToNotion(
         },
         "Thread Date": {
           date: {
-            start: threadDate.toISOString(),
+            start: threadDate.toLocaleString("ja-JP", {
+              timeZone: "Asia/Tokyo",
+            }),
           },
         },
         "Thread ID": {
@@ -270,6 +272,11 @@ export async function saveThreadToNotion(
         },
         "Channel Name": {
           select: { name: channelName },
+        },
+        CreatedAt: {
+          created_time: new Date().toLocaleString("ja-JP", {
+            timeZone: "Asia/Tokyo",
+          }),
         },
       },
       children: childrenBlocks,
