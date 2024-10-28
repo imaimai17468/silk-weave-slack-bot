@@ -53,12 +53,13 @@ export async function saveThreadToNotion(
     tags,
     bulletPoints,
     nextAction,
+    conclusion,
     channelName,
   } = params;
 
   // childrenBlocks を一度に定義
   const childrenBlocks = [
-    // "概要" の見出しを追加
+    // 概要
     {
       object: "block",
       type: "heading_2",
@@ -68,6 +69,36 @@ export async function saveThreadToNotion(
             type: "text",
             text: {
               content: "概要",
+            },
+          },
+        ],
+      },
+    },
+    // 長い要約をパラグラフブロックとして追加
+    {
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: shortSummary,
+            },
+          },
+        ],
+      },
+    },
+    // "内容" の見出しを追加
+    {
+      object: "block",
+      type: "heading_2",
+      heading_2: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: "内容",
             },
           },
         ],
@@ -118,6 +149,35 @@ export async function saveThreadToNotion(
         ],
       },
     })),
+    // 結論の見出しを追加
+    {
+      object: "block",
+      type: "heading_2",
+      heading_2: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: "結論",
+            },
+          },
+        ],
+      },
+    },
+    {
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content: conclusion,
+            },
+          },
+        ],
+      },
+    },
     // "Next Action" の見出しを追加
     {
       object: "block",
