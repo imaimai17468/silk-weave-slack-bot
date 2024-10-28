@@ -13,6 +13,7 @@ export const generateSummaryAndTags = async (
   tags: string[];
   bulletPoints: string[];
   nextAction: string;
+  conclusion: string;
 }> => {
   try {
     const prompt = `
@@ -20,23 +21,25 @@ export const generateSummaryAndTags = async (
 
 1. スレッドの短い要約（日本語、100文字以内）
 2. スレッドの詳細な要約（日本語、300文字程度）
-3. スレッドから抽出した3つのタグ（キーワード）
-4. 簡潔な3つの箇条書きポイント
-5. NextAction（次に取るべき行動）
+3. 結論（日本語、150文字程度）
+4. スレッドから抽出した3つのタグ（キーワード）
+5. 簡潔な3つの箇条書きポイント
+6. NextAction（次に取るべき行動）。必要ない場合は「NextActionは必要ありません」としてください。
 
 出力は以下のJSON形式でお願いします：
 
 {
   "shortSummary": "短い要約テキスト（100文字以内）",
   "longSummary": "詳細な要約テキスト（300文字程度）",
+  "conclusion": "結論テキスト（150文字程度）",
   "tags": ["タグ1", "タグ2", "タグ3"],
   "bulletPoints": ["ポイント1", "ポイント2", "ポイント3"],
-  "nextAction": "NextActionの内容"
+  "nextAction": "NextActionの内容または「NextActionは必要ありません」"
 }
 
 スレッド内容：
 ${content}
-    `;
+        `;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -58,6 +61,7 @@ ${content}
               properties: {
                 shortSummary: { type: "string" },
                 longSummary: { type: "string" },
+                conclusion: { type: "string" },
                 tags: { type: "array", items: { type: "string" } },
                 bulletPoints: { type: "array", items: { type: "string" } },
                 nextAction: { type: "string" },
@@ -102,6 +106,7 @@ ${content}
       tags: result.tags,
       bulletPoints: result.bulletPoints,
       nextAction: result.nextAction,
+      conclusion: result.conclusion,
     };
   } catch (error) {
     console.error("Error generating summary and tags:", error);

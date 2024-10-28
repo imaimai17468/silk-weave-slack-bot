@@ -14,6 +14,7 @@ export type SaveThreadToNotionParams = {
   bulletPoints: string[];
   nextAction: string;
   channelName: string;
+  conclusion: string;
 };
 
 export type NotionPageCreateResponse = {
