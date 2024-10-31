@@ -31,7 +31,7 @@ app.post("/thread-to-notion", async (c) => {
   const retryNumHeader = c.req.header("X-Slack-Retry-Num");
   const retryNum = retryNumHeader ? parseInt(retryNumHeader, 10) : 0;
   if (retryNum > 0) {
-    return c.json({ status: "ok" });
+    return c.json({ status: "ignored", message: "リトライイベントです。" });
   }
 
   // イベントデータの処理
@@ -249,10 +249,18 @@ app.post("/thread-to-notion", async (c) => {
         );
         return c.json({ status: "error", message: "エラーが発生しました。" });
       }
+    } else {
+      return c.json({
+        status: "error",
+        message: "サポートされていないイベントタイプです。",
+      });
     }
+  } else {
+    return c.json({
+      status: "error",
+      message: "サポートされていないイベントタイプです。",
+    });
   }
-
-  return c.json({ status: "ignored" });
 });
 
 export default app;
