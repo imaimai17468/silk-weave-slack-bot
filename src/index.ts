@@ -111,13 +111,21 @@ app.post("/thread-to-notion", async (c) => {
           });
         }
 
-        // スレッドが既に保存されているか確認
-        const threadId = thread_ts;
-        const isStored = await isThreadStored(
-          notionToken,
-          notionDatabaseId,
-          threadId
+        // スレッド情報の抽出
+        const threadCreatorId = messages[0].user;
+        const participantIds = Array.from(
+          new Set(messages.map((msg) => msg.user))
         );
+        const threadTimestamp = messages[0].ts;
+
+        // スレッドが既に保存されているか確認
+        // チャンネル名とユーザー名の取得
+        const threadId = thread_ts;
+        const [isStored, channelName, userNames] = await Promise.all([
+          isThreadStored(notionToken, notionDatabaseId, threadId),
+          getChannelName(slackToken, channel_id).then((name) => `#${name}`),
+          getUserNames(slackToken, participantIds),
+        ]);
 
         if (isStored) {
           await sendErrorMessageToSlack(
@@ -131,21 +139,6 @@ app.post("/thread-to-notion", async (c) => {
             message: "スレッドは既に保存されています。",
           });
         }
-
-        // スレッド情報の抽出
-        const threadCreatorId = messages[0].user;
-        const participantIds = Array.from(
-          new Set(messages.map((msg) => msg.user))
-        );
-        const threadTimestamp = messages[0].ts;
-
-        // チャンネル名の取得
-        const channelName = await getChannelName(slackToken, channel_id).then(
-          (name) => `#${name}`
-        );
-
-        // ユーザー名の取得
-        const userNames = await getUserNames(slackToken, participantIds);
 
         // スレッド作成者の名前を取得
         const threadCreator = userNames.find(
