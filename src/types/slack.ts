@@ -7,6 +7,17 @@ export type SlackMessage = {
   [key: string]: any;
 }
 
+export type SlackEvent = {
+  type: string;
+  challenge?: string;
+  event: {
+    type: string;
+    channel: string;
+    thread_ts?: string;
+    ts: string;
+  };
+}
+
 export type SlackConversationsRepliesResponse = {
   ok: boolean;
   messages: SlackMessage[];
