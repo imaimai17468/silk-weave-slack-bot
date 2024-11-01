@@ -3,6 +3,7 @@ name = "thread-tiger"
 main = "src/index.ts"
 compatibility_date = "2024-10-22"
 compatibility_flags = [ "nodejs_compat" ]
+tail_consumers = [{service = "silk-weave-tail"}]
 
 
 # Workers Logs
