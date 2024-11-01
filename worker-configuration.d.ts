@@ -6,5 +6,4 @@ interface CloudflareBindings {
   NOTION_DATABASE_ID: string;
   OPENAI_API_KEY: string;
   SLACK_WORKSPACE_URL: string;
-  silk_weave: Queue;
 }
