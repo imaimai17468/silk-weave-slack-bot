@@ -50,8 +50,8 @@ ${content}
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 700, // 必要に応じて増やします
-        temperature: 0.6,
+        max_tokens: 900,
+        temperature: 0.4,
         response_format: {
           type: "json_schema",
           json_schema: {
