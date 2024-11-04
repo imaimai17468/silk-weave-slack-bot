@@ -91,6 +91,8 @@ Silk Weaveは以下の技術を使用して構築されています：
 
 ### 環境変数
 
+適宜ローカルとwranglerのsecretに保存してください。
+
 - `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token。
 - `SLACK_SIGNING_SECRET`: SlackアプリのSigning Secret。
 - `NOTION_TOKEN`: Notion統合のAPIトークン。
@@ -99,7 +101,7 @@ Silk Weaveは以下の技術を使用して構築されています：
 
 ### Notionデータベースの設定
 
-Notionデータベースに以下のプロパティを追加してください：
+Notionデータベースに以下のプロパティを追加してください。
 
 - **Title** (タイトル)
 - **Thread Creator** (リッチテキスト)
@@ -112,6 +114,25 @@ Notionデータベースに以下のプロパティを追加してください�
 - **Tags** (マルチセレクト)
 - **Channel Name** (セレクト)
 - **Created At** (日付)
+
+
+### SlackBotの権限設定
+
+Bot Token Scopesに以下を追加してください。
+
+- channels:history
+- groups:history
+- im:history
+- mpim:history
+- chat:write
+- users:read
+- channels:read
+- groups:read
+
+また、Event Subscriptionで以下を設定してください。
+Request URLにはCloudflare WorkersのURLを設定してください。
+
+- app_mention
 
 ## 使い方
 
