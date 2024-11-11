@@ -119,9 +119,9 @@ app.post("/thread-to-notion", async (c) => {
 
             const threadCreator = userNames.find(
               (user) => user.userId === threadCreatorId
-            )?.userName;
+            )?.userName.replace(/,/g, " ");
 
-            const participantNames = userNames.map((user) => user.userName);
+            const participantNames = userNames.map((user) => user.userName.replace(/,/g, " "));
             const threadDate = new Date(parseFloat(threadTimestamp) * 1000);
             const formattedTimestamp = thread_ts.replace(".", "");
             const threadUrl = `${slackWorkspaceUrl}/archives/${channel_id}/p${formattedTimestamp}`;
